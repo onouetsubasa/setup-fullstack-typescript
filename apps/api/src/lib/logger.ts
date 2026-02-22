@@ -5,6 +5,20 @@ export const logger = pino({
   serializers: {
     err: pino.stdSerializers.err,
   },
+  redact: {
+    paths: [
+      "*.password",
+      "*.passwordConfirmation",
+      "*.token",
+      "*.accessToken",
+      "*.refreshToken",
+      "*.email",
+      "*.phoneNumber",
+      "*.creditCard",
+      "*.cardNumber",
+    ],
+    censor: "[REDACTED]",
+  },
   ...(process.env.NODE_ENV !== "production" && {
     transport: {
       target: "pino-pretty",

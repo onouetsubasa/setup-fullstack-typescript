@@ -101,6 +101,27 @@ const users = await res.json(); // 型が自動推論される
    - API 型: `"api": "workspace:*"` + `"hono": "^4.x.x"`
 2. `pnpm install` を実行
 
+## 未実装・TODO
+
+### 認証（authMiddleware）
+
+認証は未実装。方式（JWT / Session / OAuth 等）は未決定。
+
+実装時の対応ポイント：
+
+1. `apps/api/src/middleware/authMiddleware.ts` を新規作成
+2. ミドルウェア内で `c.set("userId", "<id>")` をセットする
+3. `app.ts` に Hono の型定義を追加する
+
+```ts
+type Variables = { userId: string };
+const app = new Hono<{ Variables: Variables }>();
+```
+
+4. `requestLogger.ts` はすでに `c.get("userId")` を参照しており、実装後は自動的にログへ反映される
+
+---
+
 ## よく使うコマンド
 
 ```bash

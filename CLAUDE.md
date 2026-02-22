@@ -103,6 +103,40 @@ const users = await res.json(); // 型が自動推論される
 
 ## 未実装・TODO
 
+### レートリミット・IP制限
+
+未実装。実装時は以下の方針で対応する。
+
+#### レートリミット（hono-rate-limiter）
+
+同一IPから短時間に大量リクエストが来た場合に 429 を返す。
+
+```ts
+import { rateLimiter } from "hono-rate-limiter";
+
+app.use("*", rateLimiter({
+  windowMs: 60 * 1000, // 1分間
+  limit: 100,
+  keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "unknown",
+}));
+```
+
+- デフォルトはインメモリ管理のため、**ECS 複数台構成では Redis ストアが必要**
+- `/auth/login` など認証系エンドポイントは limit を厳しくする
+
+#### IP制限の役割分担
+
+| 用途 | 担当 |
+|---|---|
+| DDoS・大量攻撃の遮断 | WAF（インフラ） |
+| 社内IPのみ許可（全テナント共通） | ALB セキュリティグループ（インフラ） |
+| テナントごとのIP許可リスト | アプリ（認証後にDBの許可リストと照合） |
+
+マルチテナントでテナントごとにIP制限をかけたい場合はアプリ側で対応する。
+認証（`tenantId` の取得）が前提になるため、認証実装後に対応する。
+
+---
+
 ### 認証（authMiddleware）
 
 認証は未実装。方式（JWT / Session / OAuth 等）は未決定。

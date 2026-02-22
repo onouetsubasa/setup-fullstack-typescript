@@ -1,0 +1,47 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/web/.env
+    environment:
+      - NODE_ENV=development
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+    ports:
+      - "8080:8080"
+    env_file:
+      - apps/api/.env
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

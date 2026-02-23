@@ -1,12 +1,14 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { logger } from "./lib/logger";
 import { requestLogger } from "./middleware/requestLogger";
 import v1 from "./routes/v1";
 
 const app = new OpenAPIHono();
 
+app.use("*", secureHeaders());
 app.use("*", requestLogger());
 app.use(
   "*",

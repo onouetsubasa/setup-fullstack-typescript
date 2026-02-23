@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { db } from "../db";
-import { users } from "../db/schema";
+import { db } from "../../db";
+import { users } from "../../db/schema";
 
 const UserSchema = z.object({
   id: z.number(),

@@ -177,3 +177,31 @@ pnpm db:generate   # マイグレーションファイル生成
 pnpm db:migrate    # マイグレーション実行
 pnpm db:studio     # Drizzle Studio 起動
 ```
+
+---
+
+## コーディング規約
+
+### TypeScript
+- strict モード必須・`any` 禁止
+- 型のみの import は `import type` を使用
+- Entity/ドメイン型は `@repo/types` から import
+- API 型は Hono RPC の型推論を使用（手書き禁止）
+
+### コミットメッセージ
+Conventional Commits 形式を使用：
+- `feat(scope): 説明` — 新機能
+- `fix(scope): 説明` — バグ修正
+- `docs: 説明` — ドキュメントのみ
+- `refactor(scope): 説明` — リファクタリング
+
+### ロギング（Pino）
+- 構造化ログ: `logger.info({ key: value }, "message")` 形式
+- PII（メールアドレス等）はマスキングしてからログ記録
+- リクエストログは `requestLogger.ts` ミドルウェアで一元管理
+
+### API ルート設計
+- ルートは `apps/api/src/routes/` に配置
+- `@hono/zod-openapi` で Zod スキーマと OpenAPI ドキュメントを同時定義
+- バージョンプレフィックス `/v1` を付与
+- エラーレスポンスはグローバルエラーハンドラで統一処理

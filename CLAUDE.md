@@ -1,13 +1,10 @@
 # CLAUDE.md
 
-## 概要
+## このプロジェクトについて
 
 TypeScript を用いたフルスタックシステムの初期構築を効率化するためのフレームワーク。
-Hono (API) + Next.js (Web) + PostgreSQL の monorepo 構成をベースとしている。
-
-## 目的
-
-新規システム開発における TypeScript プロジェクトのセットアップを標準化・自動化し、初期構築にかかるコストを削減する。
+Hono (API) + Next.js (Web) + PostgreSQL の monorepo 構成をベースとし、
+新規システム開発における TypeScript プロジェクトのセットアップを標準化・自動化して初期構築コストを削減する。
 
 ## 技術スタック
 
@@ -24,13 +21,73 @@ Hono (API) + Next.js (Web) + PostgreSQL の monorepo 構成をベースとして
 ```
 .
 ├── apps/
-│   ├── api/          # Hono バックエンド
-│   └── web/          # Next.js フロントエンド
+│   ├── api/
+│   │   └── src/
+│   │       ├── index.ts           # エントリーポイント（ポート8080）
+│   │       ├── app.ts             # Hono設定・ミドルウェア登録・AppType export
+│   │       ├── db/
+│   │       │   ├── index.ts       # Drizzle ORM インスタンス
+│   │       │   └── schema.ts      # テーブル定義（ここに新テーブルを追加）
+│   │       ├── lib/
+│   │       │   └── logger.ts      # Pino ロガー（PII自動マスキング付き）
+│   │       ├── middleware/
+│   │       │   └── requestLogger.ts
+│   │       └── routes/v1/
+│   │           ├── index.ts       # ルート集約
+│   │           ├── health.ts
+│   │           └── users.ts       # OpenAPI + Zod スキーマ定義の参考実装
+│   └── web/
+│       └── src/
+│           ├── app/               # Next.js App Router
+│           │   ├── layout.tsx
+│           │   └── page.tsx
+│           └── lib/
+│               └── api.ts         # Hono クライアント（型安全な fetch）
 ├── packages/
-│   └── types/        # 共通型定義
+│   └── types/                     # 共通型定義
+│       └── src/
+│           └── index.ts
 ├── docker-compose.yml
 ├── turbo.json
 └── pnpm-workspace.yaml
+```
+
+## 環境変数
+
+```bash
+# apps/api/.env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app
+
+# apps/web/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+## よく使うコマンド
+
+```bash
+# 依存関係インストール
+pnpm install
+
+# 開発サーバ起動（全サービス）
+docker compose up
+
+# 開発サーバ起動（ローカル）
+docker compose up postgres -d
+pnpm dev
+
+# ビルド
+pnpm build
+
+# DB マイグレーション（apps/api で実行）
+pnpm db:generate   # マイグレーションファイル生成
+pnpm db:migrate    # マイグレーション実行
+pnpm db:studio     # Drizzle Studio 起動
+
+# 型チェック（api）
+cd apps/api && npx tsc --noEmit
+
+# Lint（web）
+cd apps/web && pnpm lint
 ```
 
 ## 型共有の方針
@@ -94,114 +151,77 @@ const users = await res.json(); // 型が自動推論される
 | Entity・ドメインモデル | `@repo/types` |
 | API のリクエスト/レスポンス | Hono RPC |
 
-### 新しいアプリへの追加手順
-
-1. `package.json` に依存を追加
-   - Entity 型: `"@repo/types": "workspace:*"`
-   - API 型: `"api": "workspace:*"` + `"hono": "^4.x.x"`
-2. `pnpm install` を実行
-
-## 未実装・TODO
-
-### レートリミット・IP制限
-
-未実装。実装時は以下の方針で対応する。
-
-#### レートリミット（hono-rate-limiter）
-
-同一IPから短時間に大量リクエストが来た場合に 429 を返す。
-
-```ts
-import { rateLimiter } from "hono-rate-limiter";
-
-app.use("*", rateLimiter({
-  windowMs: 60 * 1000, // 1分間
-  limit: 100,
-  keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "unknown",
-}));
-```
-
-- デフォルトはインメモリ管理のため、**ECS 複数台構成では Redis ストアが必要**
-- `/auth/login` など認証系エンドポイントは limit を厳しくする
-
-#### IP制限の役割分担
-
-| 用途 | 担当 |
-|---|---|
-| DDoS・大量攻撃の遮断 | WAF（インフラ） |
-| 社内IPのみ許可（全テナント共通） | ALB セキュリティグループ（インフラ） |
-| テナントごとのIP許可リスト | アプリ（認証後にDBの許可リストと照合） |
-
-マルチテナントでテナントごとにIP制限をかけたい場合はアプリ側で対応する。
-認証（`tenantId` の取得）が前提になるため、認証実装後に対応する。
-
----
-
-### 認証（authMiddleware）
-
-認証は未実装。方式（JWT / Session / OAuth 等）は未決定。
-
-実装時の対応ポイント：
-
-1. `apps/api/src/middleware/authMiddleware.ts` を新規作成
-2. ミドルウェア内で `c.set("userId", "<id>")` をセットする
-3. `app.ts` に Hono の型定義を追加する
-
-```ts
-type Variables = { userId: string };
-const app = new Hono<{ Variables: Variables }>();
-```
-
-4. `requestLogger.ts` はすでに `c.get("userId")` を参照しており、実装後は自動的にログへ反映される
-
----
-
-## よく使うコマンド
-
-```bash
-# 依存関係インストール
-pnpm install
-
-# 開発サーバ起動（全サービス）
-docker compose up
-
-# 開発サーバ起動（ローカル）
-docker compose up postgres -d
-pnpm dev
-
-# ビルド
-pnpm build
-
-# DB マイグレーション（apps/api で実行）
-pnpm db:generate   # マイグレーションファイル生成
-pnpm db:migrate    # マイグレーション実行
-pnpm db:studio     # Drizzle Studio 起動
-```
-
----
-
 ## コーディング規約
 
 ### TypeScript
-- strict モード必須・`any` 禁止
-- 型のみの import は `import type` を使用
-- Entity/ドメイン型は `@repo/types` から import
-- API 型は Hono RPC の型推論を使用（手書き禁止）
+
+**Do:**
+- strict モードを必ず有効化する
+- 型のみの import は `import type` を使用する
+- Entity/ドメイン型は `@repo/types` から import する
+- API 型は Hono RPC の型推論を使用する
+
+**Don't:**
+- `any` 型を使わない
+- Hono RPC で推論できる型を手書きで再定義しない
+
+### ロギング（Pino）
+
+**Do:**
+- 構造化ログ: `logger.info({ key: value }, "message")` 形式を使用する
+- リクエストログは `requestLogger.ts` ミドルウェアで一元管理する
+
+**Don't:**
+- PII（メールアドレス・トークン等）をマスキングせずにログ出力しない
+
+### API ルート設計
+
+- ルートは `apps/api/src/routes/v1/` に配置
+- `@hono/zod-openapi` で Zod スキーマと OpenAPI ドキュメントを同時定義
+- バージョンプレフィックス `/v1` を付与
+- エラーレスポンスはグローバルエラーハンドラで統一処理
 
 ### コミットメッセージ
+
 Conventional Commits 形式を使用：
 - `feat(scope): 説明` — 新機能
 - `fix(scope): 説明` — バグ修正
 - `docs: 説明` — ドキュメントのみ
 - `refactor(scope): 説明` — リファクタリング
 
-### ロギング（Pino）
-- 構造化ログ: `logger.info({ key: value }, "message")` 形式
-- PII（メールアドレス等）はマスキングしてからログ記録
-- リクエストログは `requestLogger.ts` ミドルウェアで一元管理
+## Claude への指示
 
-### API ルート設計
-- ルートは `apps/api/src/routes/` に配置
-- `@hono/zod-openapi` で Zod スキーマと OpenAPI ドキュメントを同時定義
-- バージョンプレフィックス `/v1` を付与
-- エラーレスポンスはグローバルエラーハンドラで統一処理
+### APIルートを追加するとき
+
+1. `apps/api/src/routes/v1/` に新ファイルを作成（`users.ts` を参考に）
+2. `@hono/zod-openapi` で Zod スキーマと OpenAPI を同時定義する
+3. `apps/api/src/routes/v1/index.ts` にルートを追加する
+4. `apps/api/src/app.ts` の `AppType` に反映されているか確認する
+5. 必要なら `packages/types/src/index.ts` に Entity 型を追加する
+
+### DBスキーマを変更するとき
+
+1. `apps/api/src/db/schema.ts` を編集する
+2. `pnpm db:generate` でマイグレーションファイルを生成する
+3. `pnpm db:migrate` でマイグレーションを反映する
+
+### Next.js に画面を追加するとき
+
+1. `apps/web/src/app/` 配下にページを作成する（App Router）
+2. API 呼び出しは `apps/web/src/lib/api.ts` の `client` を使用する
+
+### やってはいけないこと
+
+- `any` 型を使う
+- Hono RPC で推論できる型を手書きで再定義する
+- PII（メール・トークン等）をマスキングせずログ出力する
+- `pnpm install` / `pnpm add` を確認なしに実行する
+- `db/schema.ts` の変更後にマイグレーションを生成せず放置する
+
+## 未実装事項
+
+以下は未実装。実装時は設計を別途確認すること：
+
+- [ ] レートリミット（hono-rate-limiter + Redis、ECS複数台構成に注意）
+- [ ] 認証ミドルウェア（方式未決定: JWT / Session / OAuth）
+- [ ] テナントごとのIP制限（認証実装後に対応）

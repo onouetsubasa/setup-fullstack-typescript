@@ -7,67 +7,81 @@ TypeScript monorepo with Hono (API) + Next.js (Web) + PostgreSQL.
 ```
 .
 ├── apps/
-│   ├── api/          # Hono バックエンド (port: 8080)
-│   └── web/          # Next.js フロントエンド (port: 3000)
+│   ├── api/
+│   │   └── src/
+│   │       ├── index.ts           # エントリーポイント（ポート8080）
+│   │       ├── app.ts             # Hono設定・ミドルウェア登録・AppType export
+│   │       ├── db/
+│   │       │   ├── index.ts       # Drizzle ORM インスタンス
+│   │       │   └── schema.ts      # テーブル定義
+│   │       ├── lib/
+│   │       │   └── logger.ts      # Pino ロガー
+│   │       ├── middleware/
+│   │       │   └── requestLogger.ts
+│   │       └── routes/v1/
+│   │           ├── index.ts
+│   │           ├── health.ts
+│   │           └── users.ts
+│   └── web/
+│       └── src/
+│           ├── app/               # Next.js App Router
+│           │   ├── layout.tsx
+│           │   └── page.tsx
+│           └── lib/
+│               └── api.ts         # Hono クライアント（型安全な fetch）
 ├── packages/
-│   └── types/        # 共通型定義
+│   └── types/                     # 共通型定義
 ├── docker-compose.yml
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```
 
-## セットアップ
+## 環境変数
+
+```bash
+# apps/api/.env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app
+
+# apps/web/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+`.env.example` をコピーして編集する：
+
+```bash
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+```
+
+## よく使うコマンド
 
 ```bash
 # 依存関係インストール
 pnpm install
 
-# 環境変数設定
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-## ローカル開発
-
-### Docker で全サービス起動（推奨）
-
-```bash
+# 開発サーバ起動（全サービス）
 docker compose up
-```
 
-### ローカルで直接起動
-
-```bash
-# PostgreSQL だけ Docker で起動
+# 開発サーバ起動（ローカル）
 docker compose up postgres -d
-
-# 全アプリを Turborepo で起動
 pnpm dev
-```
 
-## DB マイグレーション
-
-```bash
-# apps/api ディレクトリで
-cd apps/api
-
-# マイグレーションファイル生成
-pnpm db:generate
-
-# マイグレーション実行
-pnpm db:migrate
-
-# Drizzle Studio（DB GUI）
-pnpm db:studio
-```
-
-## ビルド
-
-```bash
+# ビルド
 pnpm build
+
+# 型チェック（api）
+cd apps/api && npx tsc --noEmit
+
+# Lint（web）
+cd apps/web && pnpm lint
+
+# DB マイグレーション（apps/api で実行）
+pnpm db:generate   # マイグレーションファイル生成
+pnpm db:migrate    # マイグレーション実行
+pnpm db:studio     # Drizzle Studio 起動
 ```
 
-## AWS ECS へのデプロイ（本番）
+## デプロイ（AWS ECS）
 
 各アプリの Dockerfile はマルチステージビルドになっており、`production` ステージが本番用イメージです。
 

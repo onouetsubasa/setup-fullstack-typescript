@@ -86,7 +86,7 @@ pnpm format:check  # 全パッケージ Prettier フォーマットチェック
 
 ## 採用しなかったアプローチ
 
-| アプローチ | 不採用理由 |
-|---|---|
-| `eslint-plugin-prettier` で統合 | Prettier 公式非推奨、パフォーマンス低下 |
-| Biome で一元化 | `eslint-config-next` が使えず Next.js ルールが弱い |
+| アプローチ                      | 不採用理由                                         |
+| ------------------------------- | -------------------------------------------------- |
+| `eslint-plugin-prettier` で統合 | Prettier 公式非推奨、パフォーマンス低下            |
+| Biome で一元化                  | `eslint-config-next` が使えず Next.js ルールが弱い |

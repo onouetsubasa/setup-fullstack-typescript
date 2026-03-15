@@ -107,6 +107,7 @@ export type User = {
 ```
 
 利用するパッケージの `package.json` に追加：
+
 ```json
 "@repo/types": "workspace:*"
 ```
@@ -120,14 +121,15 @@ import type { User } from "@repo/types";
 API ルートの型を自動推論し、フロントエンドの fetch 呼び出しを型安全にする。
 
 **api 側**（`apps/api/src/app.ts`）:
+
 ```ts
-const app = new Hono()
-  .route("/users", usersRoute);
+const app = new Hono().route("/users", usersRoute);
 
 export type AppType = typeof app;
 ```
 
 **web 側**（`apps/web/src/lib/api.ts`）:
+
 ```ts
 import type { AppType } from "api";
 import { hc } from "hono/client";
@@ -136,6 +138,7 @@ export const client = hc<AppType>(process.env.NEXT_PUBLIC_API_URL!);
 ```
 
 **使い方**:
+
 ```ts
 // Server Component
 import { client } from "@/lib/api";
@@ -146,32 +149,36 @@ const users = await res.json(); // 型が自動推論される
 
 ### 使い分け
 
-| 用途 | 方法 |
-|---|---|
-| Entity・ドメインモデル | `@repo/types` |
-| API のリクエスト/レスポンス | Hono RPC |
+| 用途                        | 方法          |
+| --------------------------- | ------------- |
+| Entity・ドメインモデル      | `@repo/types` |
+| API のリクエスト/レスポンス | Hono RPC      |
 
 ## コーディング規約
 
 ### TypeScript
 
 **Do:**
+
 - strict モードを必ず有効化する
 - 型のみの import は `import type` を使用する
 - Entity/ドメイン型は `@repo/types` から import する
 - API 型は Hono RPC の型推論を使用する
 
 **Don't:**
+
 - `any` 型を使わない
 - Hono RPC で推論できる型を手書きで再定義しない
 
 ### ロギング（Pino）
 
 **Do:**
+
 - 構造化ログ: `logger.info({ key: value }, "message")` 形式を使用する
 - リクエストログは `requestLogger.ts` ミドルウェアで一元管理する
 
 **Don't:**
+
 - PII（メールアドレス・トークン等）をマスキングせずにログ出力しない
 
 ### API ルート設計
@@ -184,6 +191,7 @@ const users = await res.json(); // 型が自動推論される
 ### コミットメッセージ
 
 Conventional Commits 形式を使用：
+
 - `feat(scope): 説明` — 新機能
 - `fix(scope): 説明` — バグ修正
 - `docs: 説明` — ドキュメントのみ

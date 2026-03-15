@@ -14,7 +14,7 @@ app.use(
   "*",
   cors({
     origin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
-  })
+  }),
 );
 app.onError((err, c) => {
   logger.error({ err, path: c.req.path }, "Unhandled error");

@@ -23,8 +23,18 @@ const listRoute = createRoute({
 const usersRoute = new OpenAPIHono();
 usersRoute.openapi(listRoute, async (c) => {
   const result = [
-    { id: 1, name: "Alice", email: "alice@example.com", createdAt: "2024-01-01T00:00:00.000Z" },
-    { id: 2, name: "Bob", email: "bob@example.com", createdAt: "2024-01-02T00:00:00.000Z" },
+    {
+      id: 1,
+      name: "Alice",
+      email: "alice@example.com",
+      createdAt: "2024-01-01T00:00:00.000Z",
+    },
+    {
+      id: 2,
+      name: "Bob",
+      email: "bob@example.com",
+      createdAt: "2024-01-02T00:00:00.000Z",
+    },
   ];
   return c.json(result);
 });

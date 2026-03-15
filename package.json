@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "eslint": "^9.27.0",
+    "lefthook": "^2.1.4",
     "prettier": "^3.5.3",
     "turbo": "^2.8.10",
     "typescript": "^5.9.3"
